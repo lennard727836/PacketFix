@@ -1,0 +1,302 @@
+# =====================================================================
+#  PacketFix v2.3.0 — Configuration
+#  Depends on: PacketEvents 2.x (https://github.com/retrooper/packetevents)
+#  GitHub: https://github.com/your-org/PacketFix
+# =====================================================================
+
+# --- PACKET FIXER (port of TonimatasDEV/PacketFixer) -----------------
+# Raises hard-coded Minecraft packet/NBT size limits that cause
+# "NBT too big", "Badly compressed packet", "VarInt too big", etc.
+packet-fixer:
+  enabled: true
+
+  # NBT tag size limit in bytes (vanilla = 2 097 152 = 2 MB)
+  max-nbt-bytes: 67108864                # 64 MB
+
+  # Compressed packet payload limit (vanilla = 2 097 152 = 2 MB)
+  max-compressed-bytes: 67108864         # 64 MB
+
+  # Raw packet frame limit (vanilla = 8 388 608 = 8 MB)
+  max-packet-bytes: 134217728            # 128 MB
+
+  # Plugin-channel / custom-payload limit (vanilla = 1 048 576 = 1 MB)
+  max-payload-bytes: 33554432            # 32 MB
+
+  # Suppress VarInt/VarLong "too big" errors instead of kicking the player
+  fix-varint-overflow: true
+
+  # Extended keep-alive window in milliseconds (vanilla ≈ 30 000)
+  keep-alive-timeout-ms: 60000
+
+  # Suppress "Badly compressed packet" errors (compression threshold mismatch)
+  fix-bad-compression: true
+
+  # Suppress "Payload may not be larger than X" errors for plugin channels
+  fix-payload-overflow: true
+
+# --- SHIELD FIXES (port of Walksy/ShieldFixes) -----------------------
+# MC-105068: missing shield sounds
+# MC-238293: shield blocking animation desync for other players
+shield-fixes:
+  enabled: true
+
+  sounds:
+    # Sound played when a shield successfully absorbs a hit
+    hit:
+      enabled: true
+      sound: ITEM_SHIELD_BLOCK    # Bukkit Sound enum name
+      volume: 1.0
+      pitch: 1.0
+      # If true, only the blocking player hears the sound (not bystanders)
+      only-self: false
+
+    # Sound played when a shield is disabled by an axe
+    disable:
+      enabled: true
+      sound: ITEM_SHIELD_BREAK
+      volume: 1.0
+      pitch: 0.8
+      only-self: false
+
+  # MC-238293 — fix the blocking arm animation for other players
+  fix-blocking-animation: true
+
+  # Respect vanilla 5-tick (250 ms) delay before animation shows
+  respect-5-tick-delay: true
+
+  # Also re-send the corrected ENTITY_EQUIPMENT on player-join so
+  # late-joining players see existing shields correctly
+  resend-on-join: true
+
+# --- GHOST BLOCK FIX -------------------------------------------------
+# Resends the real server-side block state when a client shows a block
+# that doesn't exist on the server (ghost / phantom block).
+# Covers BOTH client-predicted placements that got rejected AND
+# server-side desync (pistons, commands, protection plugins, etc.).
+ghost-block-fix:
+  enabled: true
+
+  # Ticks to wait before resending (gives other plugins time to run first)
+  resend-delay-ticks: 2
+
+  # Also resend the 6 face-adjacent neighbouring blocks (UP/DOWN/N/S/E/W)
+  resend-neighbours: true
+
+  # Fix server-side ghost blocks via BlockPhysicsEvent + BlockFromToEvent
+  fix-server-side: true
+
+  # Radius in chunks around a server-side block change to notify players
+  server-side-notify-radius: 4
+
+  # Also intercept USE_ITEM_ON + PLAYER_DIGGING at the packet level
+  # to catch edge-cases that don't fire Bukkit events
+  fix-packet-level: true
+
+  # Cancel ghost blocks caused by cancelled BlockBreakEvent
+  fix-cancelled-break: true
+
+  # Cancel ghost blocks caused by cancelled BlockPlaceEvent
+  fix-cancelled-place: true
+
+  # Cancel ghost blocks caused by denied right-click interactions
+  fix-denied-interact: true
+
+# --- GHOST HIT FIX ---------------------------------------------------
+# Fixes the "ghost hit" visual: the client pre-renders a hurt animation
+# (red flash, tilt) for attacks that the SERVER cancelled or zeroed,
+# e.g. due to God mode, WorldGuard, invulnerability frames.
+ghost-hit-fix:
+  enabled: true
+
+  # Fix attacks where damage was reduced to exactly 0 (not just cancelled)
+  fix-zero-damage: true
+
+  # Fix attacks cancelled by another plugin at MONITOR priority
+  fix-cancelled-damage: true
+
+  # Ticks to wait before sending corrective packets (1 = next tick)
+  resend-delay-ticks: 1
+
+  # Radius in blocks around the victim to send the corrective status packet
+  # (observers in this range also see the ghost animation, so we fix them too)
+  observer-radius: 64
+
+  # Also re-send the victim's health bar to prevent HUD flicker
+  resend-health: true
+
+  # Also re-send the victim's food/saturation bar
+  resend-food: true
+
+# --- CHUNK BAN FIX ---------------------------------------------------
+# Detects and neutralises "crash chunks" — chunks whose malformed or
+# oversized NBT data crashes / disconnects clients on load.
+# Known chunks are stored in: plugins/PacketFix/banned-chunks.txt
+chunk-ban-fix:
+  enabled: true
+
+  # Max serialised chunk packet size in bytes before it is auto-banned
+  # Vanilla chunks rarely exceed 500 KB; 2 MB is a very safe threshold
+  max-chunk-bytes: 2097152             # 2 MB
+
+  # Warn players when they enter the danger zone around a banned chunk
+  proximity-guard: true
+
+  # Radius in chunks around a banned chunk to trigger the proximity warning
+  warn-radius-chunks: 3
+
+  # Automatically teleport the player away from the danger zone
+  auto-teleport: true
+
+  # Replace banned chunk packets with an empty (air) chunk so the client
+  # doesn't hang waiting for data that was dropped
+  replace-with-air: true
+
+  # Notify online ops / packetfix.admin players when a crash chunk is found
+  notify-ops: true
+
+  # How often (ticks) to update each player's "last safe location" fallback
+  safe-location-update-interval: 5
+
+  # Also scan chunk NBT depth before classifying as a crash chunk
+  # (avoids false-positives on legitimately large, valid chunks)
+  scan-nbt-depth: true
+  max-nbt-depth: 512
+
+# --- XP & ITEM MERGE -------------------------------------------------
+# Merges nearby XP orbs and dropped item stacks to reduce entity count
+# and SPAWN packet spam — especially important on mob grinders / farms.
+xp-merge:
+  enabled: true
+
+  # ── XP Orb Merging ─────────────────────────────────────────────────
+  # Radius in blocks within which orbs are merged into a single orb
+  merge-radius: 3.0
+
+  # Collect spawning orbs for this many ticks before merging them
+  # Higher = fewer, bigger merged orbs. Lower = more responsive pickup.
+  merge-window-ticks: 2
+
+  # Maximum XP value of a single merged orb
+  # Vanilla cap = 2477 (gives 7 levels at 0). Lower values split into
+  # multiple orbs of at most this size each, for more frequent sounds.
+  max-orb-value: 2477
+
+  # Play pickup sound once per merged orb (prevents silent XP collection)
+  play-pickup-sound: true
+  pickup-sound: ENTITY_EXPERIENCE_ORB_PICKUP
+  pickup-sound-volume: 0.1
+  pickup-sound-pitch: 0.5
+
+  # ── Item Stack Merging ─────────────────────────────────────────────
+  # Merge dropped items of the same type within this radius (blocks)
+  merge-items: true
+  item-merge-radius: 2.5
+
+  # Only merge items if both stacks were dropped within this many ticks
+  # 0 = always merge regardless of age difference
+  item-merge-max-age-diff-ticks: 0
+
+  # ── Packet Deduplication ──────────────────────────────────────────
+  # Drop duplicate SPAWN_EXPERIENCE_ORB packets sent to the same player
+  # within a single tick (prevents double-spawn race conditions)
+  dedup-packets: true
+
+# --- EXPLOIT FIXES ---------------------------------------------------
+exploit-fixes:
+  enabled: true
+
+  # ── NBT ───────────────────────────────────────────────────────────
+  # Drop items with illegally deep NBT (crash / lag machines)
+  fix-illegal-nbt: true
+  max-nbt-depth: 512
+
+  # ── Chat / Commands ───────────────────────────────────────────────
+  # Drop chat or command packets that exceed the vanilla length limit
+  fix-chat-overflow: true
+  max-chat-length: 256
+
+  # ── Book Exploit ──────────────────────────────────────────────────
+  # Block signing a book with too many pages or oversized page content
+  fix-book-exploit: true
+  max-book-pages: 100
+  max-book-page-chars: 1024
+
+  # ── Move Packets ─────────────────────────────────────────────────
+  # Drop move packets with impossibly large position deltas
+  fix-invalid-move: true
+  # Max blocks a player can move in one tick before the packet is dropped
+  max-move-delta: 100.0
+
+  # ── Creative Item Hack ────────────────────────────────────────────
+  # Block CREATIVE_INVENTORY_ACTION from non-creative players
+  fix-creative-item-hack: true
+
+  # ── Window Click Crash ────────────────────────────────────────────
+  # Drop CLICK_WINDOW packets with out-of-range slot indices
+  fix-window-click: true
+  max-valid-slot: 500
+  min-valid-slot: -999
+
+  # ── Transaction Spam ─────────────────────────────────────────────
+  # Throttle excessive WINDOW_CONFIRMATION packets per second
+  fix-transaction-spam: true
+  max-transactions-per-second: 100
+
+  # ── Sign Exploit ─────────────────────────────────────────────────
+  # Prevent oversized sign text lines (can cause NBT / packet issues)
+  fix-sign-exploit: true
+  max-sign-line-length: 80
+
+  # ── Interact Spam ────────────────────────────────────────────────
+  # Throttle USE_ENTITY packets (prevent entity-interaction spam)
+  fix-interact-spam: true
+  max-interactions-per-second: 20
+
+# --- PING LIMITER ----------------------------------------------------
+# Monitors player latency via KEEP_ALIVE round-trip measurement.
+# Takes action (warn / kick) when ping exceeds configured thresholds
+# for a sustained number of consecutive checks.
+ping-limiter:
+  enabled: true
+
+  # ── Thresholds ─────────────────────────────────────────────────────
+  # Kick the player when average ping exceeds this value (ms)
+  # Set to 0 to disable auto-kick
+  kick-threshold-ms: 1000
+
+  # ── Sustained check ────────────────────────────────────────────────
+  # How many consecutive check intervals a player must be above the
+  # threshold before an action fires (prevents false-positives from spikes)
+  sustained-checks: 3
+
+  # How often (ticks) to evaluate each player's ping. 40 = every 2 seconds.
+  check-interval-ticks: 40
+
+  # ── Sample window ──────────────────────────────────────────────────
+  # Rolling average window size — how many KEEP_ALIVE round-trips to
+  # average together for a stable ping reading
+  sample-window-size: 5
+
+  # ── Ops notification ───────────────────────────────────────────────
+  # Notify admins (packetfix.admin) when a player is auto-kicked for ping
+  notify-ops-on-kick: true
+
+  # ── Fallback ───────────────────────────────────────────────────────
+  # If no KEEP_ALIVE samples have been recorded yet (e.g. on first join),
+  # fall back to Bukkit's player.getPing() for threshold checks
+  use-bukkit-ping-fallback: true
+
+  # ── Bypass permissions ─────────────────────────────────────────────
+  # packetfix.ping.bypass      — never kicked or warned
+
+# --- LOGGING ---------------------------------------------------------
+logging:
+  # Log each fix action to the server console
+  log-fixes: true
+
+  # Enable verbose debug logging (very spammy, disable in production)
+  debug: false
+
+  # Log to a dedicated file instead of only the console
+  log-to-file: false
+  log-file: logs/packetfix.log

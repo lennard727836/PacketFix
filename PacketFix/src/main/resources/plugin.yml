@@ -1,0 +1,22 @@
+name: PacketFix
+version: 2.5.0
+main: de.packetfix.PacketFixPlugin
+api-version: 1.13
+author: PacketFix
+description: >
+  Port of PacketFixer (TonimatasDEV) + ShieldFixes (Walksy) as a Paper/Spigot plugin.
+  Includes Ghost Block Fix (client + server side) and Exploit Fixes.
+  Uses PacketEvents 2.x.
+softdepend: []
+depend: [packetevents]
+
+commands:
+  packetfix:
+    description: PacketFix main command
+    usage: /packetfix <reload|status|debug|chunkban>
+    permission: packetfix.admin
+
+permissions:
+  packetfix.admin:
+    description: Access to PacketFix commands
+    default: op
